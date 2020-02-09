@@ -4,7 +4,7 @@ library(tidyverse)
 library(readxl)
 library(lubridate)
 
-read_account_transactions <- function(filename, account_name) {
+read_account_transactions <- function(filename) {
   account <- read_excel(filename) %>% 
     dplyr::select(1, 3:6) %>% 
     dplyr::rename(dato = 1,
@@ -12,19 +12,18 @@ read_account_transactions <- function(filename, account_name) {
                   beskrivelse = 3,
                   ut = 4,
                   inn = 5) %>% 
-    dplyr::mutate(konto = account_name,
-                  dato = dmy(dato))
+    dplyr::mutate(dato = dmy(dato))
 }
 
-bruks <- read_account_transactions("bruks_2019.xls", "bruks")
-spare <-  read_account_transactions("spare_2019.xls", "spare")
-hoyrente <- read_account_transactions("hoyrente_2019.xls", "hoyrente")
+account_files <- list.files(pattern = "\\.xls$")
 
-all_account_transactions <- dplyr::bind_rows(bruks, spare, hoyrente) %>% 
-  dplyr::mutate(maaned = month(dato))
+all_account_transactions <- purrr::map_dfr(account_files, 
+                                           read_account_transactions) %>% 
+  dplyr::mutate(maaned = month(dato),
+                aar = year(dato))
 
-monthly_economy <- all_account_transactions %>% 
-  dplyr::group_by(maaned) %>% 
+economy_balance <- all_account_transactions %>% 
+  dplyr::group_by(aar, maaned) %>% 
   dplyr::summarise(inn = round(sum(inn, na.rm = T), digits = 0),
                    ut = round(sum(ut, na.rm = T), digits = 0),
                    diff = inn + ut)
