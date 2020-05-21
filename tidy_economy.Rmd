@@ -1,0 +1,90 @@
+---
+title: "Min økonomi"
+output: html_notebook
+---
+
+Data hentet fra Nordea Direct nettbanks arkiv. Eksportert til Excelfiler for hvert år og for hver konto.
+
+
+```{r lesinn, include=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(readxl)
+library(lubridate)
+library(flextable)
+
+read_account_transactions <- function(filename) {
+  account <- read_excel(filename) %>% 
+    dplyr::select(1, 3:6) %>% 
+    dplyr::rename(dato = 1,
+                  kode = 2,
+                  beskrivelse = 3,
+                  ut = 4,
+                  inn = 5) %>% 
+    dplyr::mutate(dato = dmy(dato))
+}
+
+account_files <- list.files(pattern = "\\.xls$")
+
+all_account_transactions <- purrr::map_dfr(account_files, 
+                                           read_account_transactions) %>% 
+  dplyr::mutate(maaned = ceiling_date(dato, unit = "month") - days(1),
+                aar = year(dato))
+```
+
+```{r monthly_table}
+economy_balance_monthly <- all_account_transactions %>% 
+  dplyr::group_by(maaned) %>% 
+  dplyr::summarise(inn = round(sum(inn, na.rm = T), digits = 0),
+                   ut = round(sum(ut, na.rm = T), digits = 0),
+                   diff = inn + ut)
+
+economy_balance_monthly %>% 
+  flextable() %>% 
+  set_header_labels(maaned = "Måned",
+                    inn = "Inn",
+                    ut = "Ut",
+                    diff = "Resultat") %>% 
+  colformat_int(col_keys = c("inn", "ut", "diff"), big.mark = " ") %>% 
+  set_caption("Månedlig resultat.") %>% 
+  autofit()
+```
+
+
+
+```{r yearly_table}
+economy_balance_yearly <- all_account_transactions %>% 
+  dplyr::group_by(aar) %>% 
+  dplyr::summarise(inn = round(sum(inn, na.rm = T), digits = 0),
+                   ut = round(sum(ut, na.rm = T), digits = 0),
+                   diff = inn + ut)
+
+economy_balance_yearly %>% 
+  flextable() %>% 
+  set_header_labels(maaned = "Måned",
+                    inn = "Inn",
+                    ut = "Ut",
+                    diff = "Resultat") %>% 
+  colformat_int(col_keys = c("inn", "ut", "diff"), big.mark = " ") %>% 
+  set_caption("Årlig resultat.") %>% 
+  autofit()
+```
+
+
+```{r plott}
+economy_balance_monthly %>% 
+  mutate(year = year(maaned),
+         month = month(maaned, label = TRUE, abbr = FALSE)) %>% 
+  ggplot(aes(month, diff)) +
+  geom_bar(aes(fill = diff > 0), stat = "identity",
+           color = "#000000",
+           alpha = 0.6) +
+  scale_fill_manual(guide = FALSE, breaks = c(FALSE, TRUE),
+                    values = c("#ed1c2e", "#58b02c")) +
+  scale_y_continuous(limits = c(-80000, 40000),
+                     breaks = c(-50000, 0, 25000)) +
+  facet_grid(rows = vars(year)) +
+  theme_minimal() +
+  labs(x = "", y = "Resultat \n",
+       title = "Min økonomiske balanse per måned")
+```
+
