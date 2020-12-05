@@ -44,7 +44,7 @@ economy_balance_monthly %>%
                     inn = "Inn",
                     ut = "Ut",
                     diff = "Resultat") %>% 
-  colformat_int(col_keys = c("inn", "ut", "diff"), big.mark = " ") %>% 
+  colformat_int(j = c("inn", "ut", "diff"), big.mark = " ") %>% 
   set_caption("Månedlig resultat.") %>% 
   autofit()
 ```
@@ -64,7 +64,7 @@ economy_balance_yearly %>%
                     inn = "Inn",
                     ut = "Ut",
                     diff = "Resultat") %>% 
-  colformat_int(col_keys = c("inn", "ut", "diff"), big.mark = " ") %>% 
+  colformat_int(j = c("inn", "ut", "diff"), big.mark = " ") %>% 
   set_caption("Årlig resultat.") %>% 
   autofit()
 ```
